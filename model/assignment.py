@@ -2,7 +2,10 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import tensorflow_datasets as tfds
 from gan import Discriminator, Generator
+import os
+from PIL import Image
 
 
 # will we need this?
@@ -91,10 +94,37 @@ def show_images(images):
         plt.imshow(img.reshape([sqrtimg,sqrtimg]))
     return
 
+def get_data(folder): 
+    image_list = []
+    for filename in os.listdir(folder): 
+        if filename.endswith('.jpg'):
+            img = Image.open(folder + '/' + filename)
+            np_img = np.array(img)
+            image_list.append(np_img)
+    train_images = np.array(image_list)
+    train_images = np.reshape(train_images, [train_images.shape[0], -1]) #how should we be reshaping? this is from lab 8
+    train_images = train_images/255.0
+    train_dataset = tf.data.Dataset.from_tensor_slices(train_images)
+    return train_dataset
+
+
 def main():
     # Load Abstract dataset
-    train_dataset = None # Load dataset
 
+    #Default 
+    # folder = None
+
+    #Nick
+    folder = '/Users/nickhyland/Desktop/abstract128'
+
+    #Olivia 
+    # folder = ?
+
+    #Kevin 
+    # folder = ?
+
+    train_dataset = get_data(folder)
+    print('Preprocessing Done.')
     # Get an instance of VAE
     discriminator = Discriminator()
     generator = Generator()
@@ -102,7 +132,7 @@ def main():
     # Train VAE
     num_epochs = 10
     batch_size = 128
-    noise_dim = 4
+    noise_dim = 4 #need to change this value. somehow it is receiving (128, 49152) for loss calculation. Loss calculation different?
 
     count = 0
     abstract = train_dataset.repeat(num_epochs).shuffle(batch_size).batch(batch_size)
@@ -114,6 +144,7 @@ def main():
             plt.show()
             print()
         # run a batch of data through the network
+        print(batch_input.shape)
         generator_loss, discriminator_loss = train(generator, discriminator, batch_input, batch_size, noise_dim)
 
         # print loss every so often.
