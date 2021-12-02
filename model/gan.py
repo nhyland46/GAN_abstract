@@ -28,6 +28,7 @@ class Discriminator(tf.keras.Model):
         """
         COMMENTS
         """
+        #change to Wasserstein loss?
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(logits_fake), logits=logits_fake))
         loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits_real), logits=logits_real))
         return loss
@@ -47,6 +48,7 @@ class Generator(tf.keras.Model):
         self.generator.add(LeakyReLU(alpha=0.01))
         self.generator.add(Dense(self.hidden_dim))
         self.generator.add(LeakyReLU(alpha=0.01))
+        # self.generator.add(Dense(49152))
         self.generator.add(Dense(49152,activation = 'sigmoid')) # must be sigmoid because we want pixel values to be between 0 and 1
 
 
@@ -63,5 +65,6 @@ class Generator(tf.keras.Model):
         """
         COMMENTS
         """
+        #change to Wasserstein loss?
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels = tf.ones_like(logits_fake),logits = logits_fake,name = 'generator_loss'))
         return loss

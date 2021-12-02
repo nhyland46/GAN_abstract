@@ -53,7 +53,7 @@ def train(discriminator, generator, batch_input, latent):
     batch_size = np.shape(batch_input)[0]
     z = latent
     print("latent noise shape:", np.shape(z))
-    with tf.GradientTape() as tape: # persistent=True
+    with tf.GradientTape(persistent=True) as tape: # persistent=True
       # generated images
       generated_images = generator(z) #this is not working, the generated images are batch_size x 1 but they should be batch_size x 49152
       #print("real_images shape:", np.shape(batch_input))
@@ -122,15 +122,16 @@ def main():
     # folder = None
 
     #Nick
-    #folder = '/Users/nickhyland/Desktop/abstract128'
+    folder = '/Users/nickhyland/Desktop/abstract128'
 
     #Olivia
     # folder = ?
 
     #Kevin
-    folder = '/Users/kevinma/Downloads/abstract128'
+    # folder = '/Users/kevinma/Downloads/abstract128'
     train_dataset = get_data(folder)
     print('Data loaded')
+
     # Get an instance of VAE
     discriminator = Discriminator()
     generator = Generator()
@@ -139,7 +140,7 @@ def main():
     num_epochs = 10
     batch_size = 128
     noise_dim = 50 #need to change this value. somehow it is receiving (128, 49152) for loss calculation. Loss calculation different?
-    examples_every = 250
+    examples_every = 10000
     loss_every = 50
 
     count = 0
@@ -147,17 +148,17 @@ def main():
     for batch_input in abstract:
         # every show often, show a sample result
         latent = sample_noise(batch_size, noise_dim)
-        # if count % examples_every == 0:
-        #     #print("batch_input size:", np.shape(batch_input))
-        #     #print('is any pixel negative?', any(ele < 0 for ele in batch_input[0]))
-        #     samples = generator(latent)
-        #     print('samples shape:',np.shape(samples))
-        #     fig = show_images(samples[:16])
-        #     plt.show()
-        #     print()
+        if count % examples_every == 0:
+            #print("batch_input size:", np.shape(batch_input))
+            #print('is any pixel negative?', any(ele < 0 for ele in batch_input[0]))
+            samples = generator(latent)
+            print('samples shape:',np.shape(samples))
+            fig = show_images(samples[:16])
+            plt.show()
+            print()
         # run a batch of data through the network
         #print(np.shape(batch_input))
-        generator_loss, discriminator_loss = train(generator, discriminator, batch_input, latent)
+        generator_loss, discriminator_loss = train(discriminator, generator, batch_input, latent)
 
         # print loss every so often.
         # We want to make sure D_loss doesn't go to 0
