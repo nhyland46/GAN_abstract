@@ -47,7 +47,7 @@ class Generator(tf.keras.Model):
         self.generator.add(LeakyReLU(alpha=0.01))
         self.generator.add(Dense(self.hidden_dim))
         self.generator.add(LeakyReLU(alpha=0.01))
-        self.generator.add(Dense(49152,activation = 'sigmoid'))
+        self.generator.add(Dense(49152,activation = 'sigmoid')) # must be sigmoid because we want pixel values to be between 0 and 1
 
 
     def call(self, x):
