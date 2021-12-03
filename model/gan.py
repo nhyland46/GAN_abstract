@@ -22,6 +22,7 @@ class Discriminator(tf.keras.Model):
         """
         COMMENTS
         """
+        # print("discriminator")
         return self.discriminator(x)
 
     def loss_function(self, logits_fake, logits_real):
@@ -48,7 +49,6 @@ class Generator(tf.keras.Model):
         self.generator.add(LeakyReLU(alpha=0.01))
         self.generator.add(Dense(self.hidden_dim))
         self.generator.add(LeakyReLU(alpha=0.01))
-        # self.generator.add(Dense(49152))
         self.generator.add(Dense(49152,activation = 'sigmoid')) # must be sigmoid because we want pixel values to be between 0 and 1
 
 
@@ -56,9 +56,8 @@ class Generator(tf.keras.Model):
         """
         COMMENTS
         """
-        print('running generator')
+        # print('generator')
         output = self.generator(x)
-        print(np.shape(output))
         return(output)
 
     def loss_function(self, logits_fake):

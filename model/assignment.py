@@ -6,6 +6,7 @@ import tensorflow as tf
 from gan import Discriminator, Generator
 import os
 from PIL import Image
+import time
 
 
 # will we need this?
@@ -46,23 +47,23 @@ def train(discriminator, generator, batch_input, latent):
     Returns:
     -
     """
-    print('starting training')
+    # print('starting training')
     optimizer = tf.keras.optimizers.Adam(learning_rate = .001)
 
     # random noise fed into our generator
     batch_size = np.shape(batch_input)[0]
     z = latent
-    print("latent noise shape:", np.shape(z))
+    # print("latent noise shape:", np.shape(z))
     with tf.GradientTape(persistent=True) as tape: # persistent=True
       # generated images
       generated_images = generator(z) #this is not working, the generated images are batch_size x 1 but they should be batch_size x 49152
       #print("real_images shape:", np.shape(batch_input))
-      print("generated_images shape:", np.shape(generated_images))
+    #   print("generated_images shape:", np.shape(generated_images))
       logits_real = discriminator(preprocess_image(batch_input))
-      print("real images logits shape:", np.shape(logits_real))
+    #   print("real images logits shape:", np.shape(logits_real))
       # re-use discriminator weights on new inputs
       logits_fake = discriminator(generated_images)
-      print("fake images logits shape:", np.shape(logits_fake))
+    #   print("fake images logits shape:", np.shape(logits_fake))
       generator_loss = generator.loss_function(logits_fake)
       discriminator_loss = discriminator.loss_function(logits_fake, logits_real)
 
@@ -72,7 +73,8 @@ def train(discriminator, generator, batch_input, latent):
 
     discriminator_gradients = tape.gradient(discriminator_loss, discriminator.trainable_variables)
     optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
-
+    # print('finished training')
+    # print()
     return generator_loss, discriminator_loss
 
 # A bunch of utility functions
@@ -140,22 +142,23 @@ def main():
     num_epochs = 10
     batch_size = 128
     noise_dim = 50 #need to change this value. somehow it is receiving (128, 49152) for loss calculation. Loss calculation different?
-    examples_every = 10000
+    examples_every = 50
     loss_every = 50
 
-    count = 0
+    count = 1
     abstract = train_dataset.repeat(num_epochs).shuffle(batch_size).batch(batch_size)
     for batch_input in abstract:
+        print("batch", count)
         # every show often, show a sample result
         latent = sample_noise(batch_size, noise_dim)
         if count % examples_every == 0:
             #print("batch_input size:", np.shape(batch_input))
             #print('is any pixel negative?', any(ele < 0 for ele in batch_input[0]))
             samples = generator(latent)
-            print('samples shape:',np.shape(samples))
+            # print('samples shape:',np.shape(samples))
             fig = show_images(samples[:16])
-            plt.show()
-            print()
+            plt.show(block=False)
+            
         # run a batch of data through the network
         #print(np.shape(batch_input))
         generator_loss, discriminator_loss = train(discriminator, generator, batch_input, latent)
@@ -164,6 +167,7 @@ def main():
         # We want to make sure D_loss doesn't go to 0
         if count % loss_every == 0:
             print('Iter: {}, D: {:.4}, G:{:.4}'.format(count, discriminator_loss, generator_loss))
+        print()
         count += 1
 
     # Visualize results
