@@ -2,7 +2,6 @@ import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
-#import tensorflow_datasets as tfds
 from gan import Discriminator, Generator
 import os
 from PIL import Image
@@ -56,23 +55,23 @@ def train(discriminator, generator, batch_input, latent):
     -batch_input: a tensor of batch_size x num_channels (3) x 128 x 128
     -latent: a seed tensor of batch_size x noise_dim to input into generator
     """
-    # print('starting training')
-    optimizer = tf.keras.optimizers.Adam(learning_rate = .001)
+    ##TODO: change to train discriminator more than generator (5x more?)
+
+    optimizer = tf.keras.optimizers.RMSprop(learning_rate = .00005)
 
     # random noise fed into our generator
     batch_size = np.shape(batch_input)[0]
     z = latent
-    # print("latent noise shape:", np.shape(z))
+    
     with tf.GradientTape(persistent=True) as tape: # persistent=True
       # generated images
-      generated_images = generator(z) #this is not working, the generated images are batch_size x 1 but they should be batch_size x 49152
-      #print("real_images shape:", np.shape(batch_input))
-    #   print("generated_images shape:", np.shape(generated_images))
+      generated_images = generator(z) 
+    
       logits_real = discriminator(preprocess_image(batch_input))
-    #   print("real images logits shape:", np.shape(logits_real))
+
       # re-use discriminator weights on new inputs
       logits_fake = discriminator(generated_images)
-    #   print("fake images logits shape:", np.shape(logits_fake))
+    
       generator_loss = generator.loss_function(logits_fake)
       discriminator_loss = discriminator.loss_function(logits_fake, logits_real)
 
@@ -82,8 +81,7 @@ def train(discriminator, generator, batch_input, latent):
 
     discriminator_gradients = tape.gradient(discriminator_loss, discriminator.trainable_variables)
     optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
-    # print('finished training')
-    # print()
+    
     return generator_loss, discriminator_loss
 
 # A bunch of utility functions
@@ -126,6 +124,7 @@ def get_data(folder):
     train_images = np.reshape(train_images, [train_images.shape[0], 3, 128,128]) #how should we be reshaping? this is from lab 8
     print('train_images shape:', np.shape(train_images))
     train_images = train_images/255.0
+    # show_images(train_images[0:4])
     print('four images:',show_images(train_images[0:4]))
     train_dataset = tf.data.Dataset.from_tensor_slices(train_images)
     return train_dataset
@@ -138,13 +137,13 @@ def main():
     # folder = None
 
     #Nick
-    #folder = '/Users/nickhyland/Desktop/abstract128'
+    folder = '/Users/nickhyland/Desktop/abstract128'
 
     #Olivia
     # folder = ?
 
     #Kevin
-    folder = '/Users/kevinma/Downloads/abstract128'
+    # folder = '/Users/kevinma/Downloads/abstract128'
     train_dataset = get_data(folder)
     print('Data loaded')
 
@@ -158,6 +157,7 @@ def main():
     noise_dim = 50
     examples_every = 200
     loss_every = 50
+    n_discrim = 5 #use this to train discriminator n times much as generator
 
 
     abstract = train_dataset.repeat(num_epochs).shuffle(batch_size).batch(batch_size)
@@ -169,15 +169,11 @@ def main():
             latent = sample_noise(batch_size, noise_dim)
             # every show often, show a sample result
             if count % examples_every == 0:
-                #print("batch_input size:", np.shape(batch_input))
-                #print('is any pixel negative?', any(ele < 0 for ele in batch_input[0]))
                 samples = generator(latent)
-                # print('samples shape:',np.shape(samples))
                 fig = show_images(samples[:16])
                 plt.show()
 
             # run a batch of data through the network
-            #print(np.shape(batch_input))
             generator_loss, discriminator_loss = train(discriminator, generator, batch_input, latent)
 
             # print loss every so often.
