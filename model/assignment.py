@@ -7,7 +7,7 @@ from gan import Discriminator, Generator
 import os
 from PIL import Image
 import time
-
+start = time.time()
 
 # will we need this?
 def one_hot(labels, class_size):
@@ -124,13 +124,13 @@ def main():
     # folder = None
 
     #Nick
-    folder = '/Users/nickhyland/Desktop/abstract128'
+    #folder = '/Users/nickhyland/Desktop/abstract128'
 
     #Olivia
     # folder = ?
 
     #Kevin
-    # folder = '/Users/kevinma/Downloads/abstract128'
+    folder = '/Users/kevinma/Downloads/abstract128'
     train_dataset = get_data(folder)
     print('Data loaded')
 
@@ -158,7 +158,7 @@ def main():
             # print('samples shape:',np.shape(samples))
             fig = show_images(samples[:16])
             plt.show(block=False)
-            
+
         # run a batch of data through the network
         #print(np.shape(batch_input))
         generator_loss, discriminator_loss = train(discriminator, generator, batch_input, latent)
@@ -169,9 +169,9 @@ def main():
             print('Iter: {}, D: {:.4}, G:{:.4}'.format(count, discriminator_loss, generator_loss))
         print()
         count += 1
-
+    print("finished training at", time.time() - start)
     # Visualize results
-    # show_images()
+    show_images()
 
 
 if __name__ == "__main__":
