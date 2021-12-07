@@ -30,9 +30,13 @@ def one_hot(labels, class_size):
     targets = tf.cast(targets, tf.float32)
     return targets
 
-def sample_noise(batch_size, dimension):
+def sample_noise(batch_size, noise_dim):
     """
-    COMMENTS
+    Returns a batch_size x noise_dim matrix of random uniform values.
+
+    Inputs:
+    -batch_size
+    -noise_dim: desired dimension of noise vector
     """
     return tf.random.uniform((batch_size, dimension), minval = -1, maxval = 1)
 
@@ -44,8 +48,13 @@ def preprocess_image(x):
 
 def train(discriminator, generator, batch_input, latent):
     """
-    Returns:
-    -
+    Returns a tuple of (generator_loss, discriminator_loss)
+
+    Inputs:
+    -discriminator: a model of Discriminator classes
+    -generator: a model of Generator class
+    -batch_input: a tensor of batch_size x num_channels (3) x 128 x 128
+    -latent: a seed tensor of batch_size x noise_dim to input into generator
     """
     # print('starting training')
     optimizer = tf.keras.optimizers.Adam(learning_rate = .001)
@@ -80,12 +89,16 @@ def train(discriminator, generator, batch_input, latent):
 # A bunch of utility functions
 def show_images(images):
     """
-    Shows example images.
+    Shows a square grid of images using matplotlib.
+    
+    Inputs:
+    -images : num_images x num_channels (3) x 128 x 128
     """
-    images = np.reshape(images, [images.shape[0], -1])  # images reshape to (batch_size, D)
+    print('shape of images:',np.shape(images))
+    images = np.reshape(images, [images.shape[0], 3, 128, 128])  # images reshape to (batch_size, D)
     #print('images shape:',np.shape(images))
     sqrtn = int(np.ceil(np.sqrt(images.shape[0])))
-    sqrtimg = int(np.ceil(np.sqrt(images.shape[1]/3)))
+    dim = 128 #height or width of image
 
     fig = plt.figure(figsize=(sqrtn, sqrtn))
     gs = gridspec.GridSpec(sqrtn, sqrtn)
@@ -98,7 +111,7 @@ def show_images(images):
         ax.set_yticklabels([])
         ax.set_aspect('equal')
         #print('16 pixels of one image:', img[:16])
-        plt.imshow(img.reshape([sqrtimg,sqrtimg,3]))
+        plt.imshow(img.reshape([dim,dim,3]))
     return
 
 def get_data(folder):
@@ -109,10 +122,11 @@ def get_data(folder):
             np_img = np.array(img)
             image_list.append(np_img)
     train_images = np.array(image_list)
-    train_images = np.reshape(train_images, [train_images.shape[0], -1]) #how should we be reshaping? this is from lab 8
     #print('train_images shape:', np.shape(train_images))
+    train_images = np.reshape(train_images, [train_images.shape[0], 3, 128,128]) #how should we be reshaping? this is from lab 8
+    print('train_images shape:', np.shape(train_images))
     train_images = train_images/255.0
-    print('one image:',train_images[0])
+    print('four images:',show_images(train_images[0:4]))
     train_dataset = tf.data.Dataset.from_tensor_slices(train_images)
     return train_dataset
 
@@ -139,39 +153,41 @@ def main():
     generator = Generator()
 
     # HYPERPARAMS
-    num_epochs = 10
-    batch_size = 128
-    noise_dim = 50 #need to change this value. somehow it is receiving (128, 49152) for loss calculation. Loss calculation different?
-    examples_every = 50
+    num_epochs = 1
+    batch_size = 100
+    noise_dim = 50
+    examples_every = 200
     loss_every = 50
 
-    count = 1
+
     abstract = train_dataset.repeat(num_epochs).shuffle(batch_size).batch(batch_size)
-    for batch_input in abstract:
-        print("batch", count)
-        # every show often, show a sample result
-        latent = sample_noise(batch_size, noise_dim)
-        if count % examples_every == 0:
-            #print("batch_input size:", np.shape(batch_input))
-            #print('is any pixel negative?', any(ele < 0 for ele in batch_input[0]))
-            samples = generator(latent)
-            # print('samples shape:',np.shape(samples))
-            fig = show_images(samples[:16])
-            plt.show(block=False)
+    for epoch in np.arange(num_epochs):
+        count = 0
+        for batch_input in abstract:
+            print("batch", count)
+            print('batch shape', np.shape(batch_input))
+            latent = sample_noise(batch_size, noise_dim)
+            # every show often, show a sample result
+            if count % examples_every == 0:
+                #print("batch_input size:", np.shape(batch_input))
+                #print('is any pixel negative?', any(ele < 0 for ele in batch_input[0]))
+                samples = generator(latent)
+                # print('samples shape:',np.shape(samples))
+                fig = show_images(samples[:16])
+                plt.show()
 
-        # run a batch of data through the network
-        #print(np.shape(batch_input))
-        generator_loss, discriminator_loss = train(discriminator, generator, batch_input, latent)
+            # run a batch of data through the network
+            #print(np.shape(batch_input))
+            generator_loss, discriminator_loss = train(discriminator, generator, batch_input, latent)
 
-        # print loss every so often.
-        # We want to make sure D_loss doesn't go to 0
-        if count % loss_every == 0:
-            print('Iter: {}, D: {:.4}, G:{:.4}'.format(count, discriminator_loss, generator_loss))
-        print()
-        count += 1
+            # print loss every so often.
+            # We want to make sure D_loss doesn't go to 0
+            if count % loss_every == 0:
+                print('Iter: {}, D: {:.4}, G:{:.4}'.format(count, discriminator_loss, generator_loss))
+            print()
+            count += 1
     print("finished training at", time.time() - start)
     # Visualize results
-    show_images()
 
 
 if __name__ == "__main__":
