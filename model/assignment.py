@@ -37,7 +37,8 @@ def sample_noise(BATCH_SIZE, NOISE_DIM):
     -BATCH_SIZE
     -NOISE_DIM: desired dimension of noise vector
     """
-    return tf.random.uniform((BATCH_SIZE, NOISE_DIM), minval = -1, maxval = 1)
+    noise = tf.random.uniform((BATCH_SIZE, NOISE_DIM), minval = 0, maxval = 1)
+    return noise
 
 def preprocess_image(x):
     """
@@ -45,7 +46,7 @@ def preprocess_image(x):
     """
     return 2 * x - 1.0
 
-def train(discriminator, generator, optimizer, batch_input, latent):
+def train(discriminator, generator, d_optimizer, g_optimizer, batch_input, latent):
     """
     Returns a tuple of (generator_loss, discriminator_loss)
 
@@ -56,8 +57,6 @@ def train(discriminator, generator, optimizer, batch_input, latent):
     -batch_input: a tensor of BATCH_SIZE x num_channels (3) x 128 x 128
     -latent: a seed tensor of BATCH_SIZE x NOISE_DIM to input into generator
     """
-    ##TODO: change to train discriminator more than generator (5x more?)
-
     # random noise fed into our generator
     BATCH_SIZE = np.shape(batch_input)[0]
     z = latent
@@ -66,7 +65,7 @@ def train(discriminator, generator, optimizer, batch_input, latent):
       # generated images
       generated_images = generator(z)
 
-      logits_real = discriminator(preprocess_image(batch_input))
+      logits_real = discriminator(batch_input)
 
       # re-use discriminator weights on new inputs
       logits_fake = discriminator(generated_images)
@@ -76,10 +75,10 @@ def train(discriminator, generator, optimizer, batch_input, latent):
 
     # call optimize on the generator and the discriminator
     generator_gradients = tape.gradient(generator_loss, generator.trainable_variables)
-    optimizer.apply_gradients(zip(generator_gradients, generator.trainable_variables))
+    g_optimizer.apply_gradients(zip(generator_gradients, generator.trainable_variables))
 
     discriminator_gradients = tape.gradient(discriminator_loss, discriminator.trainable_variables)
-    optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
+    d_optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
 
     return generator_loss, discriminator_loss
 
@@ -153,20 +152,25 @@ def main():
     generator = Generator()
 
     # HYPERPARAMS
-    NUM_EPOCHS = 1
+    NUM_EPOCHS = 40
+    #BATCH_SIZE = 100
     BATCH_SIZE = 100
-    NOISE_DIM = 50
-    EXAMPLES_EVERY = 200
-    LOSS_EVERY = 50
-    N_DISCRIM = 5 #use this to train discriminator n times much as generator
-    optimizer = tf.keras.optimizers.RMSprop(learning_rate = .00005)
+    NOISE_DIM = 1000
+    EXAMPLES_EVERY = 20
+    LOSS_EVERY = 20
+    #N_DISCRIM = 5 #use this to train discriminator n times much as generator
+    d_optimizer = tf.keras.optimizers.RMSprop(learning_rate = .00005)
+    #d_optimizer = tf.keras.optimizers.RMSprop(learning_rate = .25)
+    g_optimizer = tf.keras.optimizers.RMSprop(learning_rate = .00005)
+    g_optimizer = tf.keras.optimizers.RMSprop(learning_rate = .25)
 
-    abstract = train_dataset.repeat(NUM_EPOCHS).shuffle(BATCH_SIZE).batch(BATCH_SIZE)
+
     for epoch in np.arange(NUM_EPOCHS):
+        abstract = train_dataset.shuffle(BATCH_SIZE).batch(BATCH_SIZE)
         count = 0
         for batch_input in abstract:
             print("batch", count)
-            print('batch shape', np.shape(batch_input))
+            #print('batch shape', np.shape(batch_input))
             latent = sample_noise(BATCH_SIZE, NOISE_DIM)
             # every show often, show a sample result
             print("")
@@ -176,7 +180,7 @@ def main():
                 plt.show()
 
             # run a batch of data through the network
-            generator_loss, discriminator_loss = train(discriminator, generator, optimizer, batch_input, latent)
+            generator_loss, discriminator_loss = train(discriminator, generator, d_optimizer, g_optimizer, batch_input, latent)
 
             # print loss every so often.
             # We want to make sure D_loss doesn't go to 0

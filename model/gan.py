@@ -22,7 +22,7 @@ class Discriminator(tf.keras.Model):
             [
                 # 3x128x128 -> 128x128x3
                 Reshape((128,128,3)),
-                # 3x128x128 -> 64x32x32
+                # 128x128x3 -> 64x32x32
                 Conv2D(filters=64,kernel_size=11,strides=4,padding='SAME',kernel_constraint=self.const),
                 LeakyReLU(alpha=self.alpha),
 
@@ -37,7 +37,7 @@ class Discriminator(tf.keras.Model):
                 # 512x4x4 -> 1024x1x1
                 Conv2D(1024,4,1,'valid',kernel_constraint=self.const),
                 Flatten(),
-                Dense(1, activation='sigmoid')
+                Dense(1)
             ]
         )
         # self.discriminator.add(Dense(self.hidden_dim))
@@ -68,9 +68,8 @@ class Discriminator(tf.keras.Model):
         real images
         """
         #Old loss
-        # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(logits_fake), logits=logits_fake))
-        # loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits_real), logits=logits_real))
-
+        #loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(logits_fake), logits=logits_fake))
+        #loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits_real), logits=logits_real))
 
         #Wasserstein loss
         #labels should be -1 for real and 1 for fake instead of 0 and 1
@@ -97,7 +96,7 @@ class Generator(tf.keras.Model):
         self.generator = Sequential(
             [
                 Dense(1024),
-                LeakyReLU(alpha=0.2),
+                LeakyReLU(alpha=self.alpha),
                 Reshape((1,1,1024)),
 
                 # 1x1x1024 -> 4x4x512
@@ -146,12 +145,13 @@ class Generator(tf.keras.Model):
         fake generated images
         """
         #Old loss
-        # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels = tf.ones_like(logits_fake),logits = logits_fake,name = 'generator_loss'))
+        #loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels = tf.ones_like(logits_fake),logits = logits_fake,name = 'generator_loss'))
 
         #Wasserstein loss
         #check sign, we want to maximimize mean(logits_fake), so loss should be negative of that?
         # https://developers.google.com/machine-learning/gan/loss
-        return -tf.reduce_mean(logits_fake)
+        loss = -tf.reduce_mean(logits_fake)
+        return loss
 
 class ClipConstraint(Constraint):
 	# set clip value when initialized
