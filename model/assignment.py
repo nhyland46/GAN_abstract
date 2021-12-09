@@ -29,15 +29,15 @@ def one_hot(labels, class_size):
     targets = tf.cast(targets, tf.float32)
     return targets
 
-def sample_noise(batch_size, noise_dim):
+def sample_noise(BATCH_SIZE, NOISE_DIM):
     """
-    Returns a batch_size x noise_dim matrix of random uniform values.
+    Returns a BATCH_SIZE x NOISE_DIM matrix of random uniform values.
 
     Inputs:
-    -batch_size
-    -noise_dim: desired dimension of noise vector
+    -BATCH_SIZE
+    -NOISE_DIM: desired dimension of noise vector
     """
-    return tf.random.uniform((batch_size, dimension), minval = -1, maxval = 1)
+    return tf.random.uniform((BATCH_SIZE, NOISE_DIM), minval = -1, maxval = 1)
 
 def preprocess_image(x):
     """
@@ -45,33 +45,32 @@ def preprocess_image(x):
     """
     return 2 * x - 1.0
 
-def train(discriminator, generator, batch_input, latent):
+def train(discriminator, generator, optimizer, batch_input, latent):
     """
     Returns a tuple of (generator_loss, discriminator_loss)
 
     Inputs:
     -discriminator: a model of Discriminator classes
     -generator: a model of Generator class
-    -batch_input: a tensor of batch_size x num_channels (3) x 128 x 128
-    -latent: a seed tensor of batch_size x noise_dim to input into generator
+    -optimizer: object of class tf.keras.optimizers
+    -batch_input: a tensor of BATCH_SIZE x num_channels (3) x 128 x 128
+    -latent: a seed tensor of BATCH_SIZE x NOISE_DIM to input into generator
     """
     ##TODO: change to train discriminator more than generator (5x more?)
 
-    optimizer = tf.keras.optimizers.RMSprop(learning_rate = .00005)
-
     # random noise fed into our generator
-    batch_size = np.shape(batch_input)[0]
+    BATCH_SIZE = np.shape(batch_input)[0]
     z = latent
-    
+
     with tf.GradientTape(persistent=True) as tape: # persistent=True
       # generated images
-      generated_images = generator(z) 
-    
+      generated_images = generator(z)
+
       logits_real = discriminator(preprocess_image(batch_input))
 
       # re-use discriminator weights on new inputs
       logits_fake = discriminator(generated_images)
-    
+
       generator_loss = generator.loss_function(logits_fake)
       discriminator_loss = discriminator.loss_function(logits_fake, logits_real)
 
@@ -81,19 +80,21 @@ def train(discriminator, generator, batch_input, latent):
 
     discriminator_gradients = tape.gradient(discriminator_loss, discriminator.trainable_variables)
     optimizer.apply_gradients(zip(discriminator_gradients, discriminator.trainable_variables))
-    
+
     return generator_loss, discriminator_loss
 
 # A bunch of utility functions
 def show_images(images):
     """
     Shows a square grid of images using matplotlib.
-    
+
     Inputs:
     -images : num_images x num_channels (3) x 128 x 128
     """
+    print('showing images...')
     print('shape of images:',np.shape(images))
-    images = np.reshape(images, [images.shape[0], 3, 128, 128])  # images reshape to (batch_size, D)
+    print('image pixel values:',images[0,0])
+    images = np.reshape(images, [images.shape[0], 3, 128, 128])  # images reshape to (BATCH_SIZE, D)
     #print('images shape:',np.shape(images))
     sqrtn = int(np.ceil(np.sqrt(images.shape[0])))
     dim = 128 #height or width of image
@@ -113,6 +114,7 @@ def show_images(images):
     return
 
 def get_data(folder):
+    print('extracting data...')
     image_list = []
     for filename in os.listdir(folder):
         if filename.endswith('.jpg'):
@@ -131,19 +133,18 @@ def get_data(folder):
 
 
 def main():
-    # Load Abstract dataset
-
+    # Load Abstract datasett
     #Default
     # folder = None
 
     #Nick
-    folder = '/Users/nickhyland/Desktop/abstract128'
+    #folder = '/Users/nickhyland/Desktop/abstract128'
 
     #Olivia
     # folder = ?
 
     #Kevin
-    # folder = '/Users/kevinma/Downloads/abstract128'
+    folder = '/Users/kevinma/Downloads/abstract128'
     train_dataset = get_data(folder)
     print('Data loaded')
 
@@ -152,33 +153,34 @@ def main():
     generator = Generator()
 
     # HYPERPARAMS
-    num_epochs = 1
-    batch_size = 100
-    noise_dim = 50
-    examples_every = 200
-    loss_every = 50
-    n_discrim = 5 #use this to train discriminator n times much as generator
+    NUM_EPOCHS = 1
+    BATCH_SIZE = 100
+    NOISE_DIM = 50
+    EXAMPLES_EVERY = 200
+    LOSS_EVERY = 50
+    N_DISCRIM = 5 #use this to train discriminator n times much as generator
+    optimizer = tf.keras.optimizers.RMSprop(learning_rate = .00005)
 
-
-    abstract = train_dataset.repeat(num_epochs).shuffle(batch_size).batch(batch_size)
-    for epoch in np.arange(num_epochs):
+    abstract = train_dataset.repeat(NUM_EPOCHS).shuffle(BATCH_SIZE).batch(BATCH_SIZE)
+    for epoch in np.arange(NUM_EPOCHS):
         count = 0
         for batch_input in abstract:
             print("batch", count)
             print('batch shape', np.shape(batch_input))
-            latent = sample_noise(batch_size, noise_dim)
+            latent = sample_noise(BATCH_SIZE, NOISE_DIM)
             # every show often, show a sample result
-            if count % examples_every == 0:
+            print("")
+            if count % EXAMPLES_EVERY == 0:
                 samples = generator(latent)
                 fig = show_images(samples[:16])
                 plt.show()
 
             # run a batch of data through the network
-            generator_loss, discriminator_loss = train(discriminator, generator, batch_input, latent)
+            generator_loss, discriminator_loss = train(discriminator, generator, optimizer, batch_input, latent)
 
             # print loss every so often.
             # We want to make sure D_loss doesn't go to 0
-            if count % loss_every == 0:
+            if count % LOSS_EVERY == 0:
                 print('Iter: {}, D: {:.4}, G:{:.4}'.format(count, discriminator_loss, generator_loss))
             print()
             count += 1
