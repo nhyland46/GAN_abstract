@@ -1,3 +1,5 @@
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras import Sequential
@@ -5,7 +7,11 @@ from tensorflow.keras.layers import Dense, Flatten, LeakyReLU, Reshape, Conv2D, 
 from tensorflow.math import exp, sqrt, square
 from tensorflow.keras.constraints import Constraint
 from keras import backend
-
+import os
+import sys
+from PIL import Image
+import time
+#start = time.time()
 
 class Discriminator(tf.keras.Model):
     def __init__(self):
@@ -68,8 +74,9 @@ class Discriminator(tf.keras.Model):
         real images
         """
         #Old loss
-        #loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(logits_fake), logits=logits_fake))
-        #loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits_real), logits=logits_real))
+        # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(logits_fake), logits=logits_fake))
+        # loss += tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(logits_real), logits=logits_real))
+
 
         #Wasserstein loss
         #labels should be -1 for real and 1 for fake instead of 0 and 1
@@ -96,7 +103,7 @@ class Generator(tf.keras.Model):
         self.generator = Sequential(
             [
                 Dense(1024),
-                LeakyReLU(alpha=self.alpha),
+                LeakyReLU(alpha=0.2),
                 Reshape((1,1,1024)),
 
                 # 1x1x1024 -> 4x4x512
@@ -145,13 +152,12 @@ class Generator(tf.keras.Model):
         fake generated images
         """
         #Old loss
-        #loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels = tf.ones_like(logits_fake),logits = logits_fake,name = 'generator_loss'))
+        # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels = tf.ones_like(logits_fake),logits = logits_fake,name = 'generator_loss'))
 
         #Wasserstein loss
         #check sign, we want to maximimize mean(logits_fake), so loss should be negative of that?
         # https://developers.google.com/machine-learning/gan/loss
-        loss = -tf.reduce_mean(logits_fake)
-        return loss
+        return -tf.reduce_mean(logits_fake)
 
 class ClipConstraint(Constraint):
 	# set clip value when initialized
